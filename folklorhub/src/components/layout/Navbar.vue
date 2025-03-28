@@ -1,6 +1,6 @@
 <template>
   <nav class="bg-white shadow-md">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="container mx-auto px-4">
       <div class="flex justify-between h-16">
         <div class="flex">
           <!-- Logo -->
@@ -10,7 +10,7 @@
             </router-link>
           </div>
 
-          <!-- Navigacijski linkovi -->
+          <!-- Navigation Links -->
           <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
             <router-link
               to="/"
@@ -91,8 +91,8 @@
     </div>
   </nav>
 </template>
-  
-  <script>
+
+<script>
 export default {
   name: 'Navbar',
 }
