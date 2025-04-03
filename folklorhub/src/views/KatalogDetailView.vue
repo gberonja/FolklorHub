@@ -423,11 +423,11 @@ export default {
   },
   methods: {
     fetchItemDetails() {
-      // Simuliramo dohvat podataka iz baze - kasnije ćemo ovo zamijeniti stvarnim pozivom Firebase-u
+      // Simulacija, kasnije će se korisiitit Firebase
       setTimeout(() => {
         const { type, id } = this.$route.params
 
-        // Pronađi stavku u dummy podacima
+        // Dummy podaci za početak
         const item = this.itemsData.find((item) => item.id === id && item.type === type)
 
         if (item) {
@@ -437,11 +437,11 @@ export default {
         }
 
         this.loading = false
-      }, 800) // Simuliramo malo kašnjenja za realističniji dojam
+      }, 800) // Simulacija
     },
   },
   watch: {
-    // Kad se promijene parametri rute, dohvati novu stavku
+
     '$route.params': {
       handler() {
         this.loading = true

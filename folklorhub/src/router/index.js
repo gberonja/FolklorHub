@@ -15,12 +15,13 @@ const router = createRouter({
       // Koristimo lazy-loading za ovu rutu
       component: () => import('../views/KatalogView.vue')
     },
-    /*
+
     {
       path: '/dogadjanja',
       name: 'dogadjanja',
       component: () => import('../views/DogadjanjaView.vue')
     },
+    /*
     {
       path: '/forum',
       name: 'forum',
