@@ -21,12 +21,18 @@ const router = createRouter({
       name: 'dogadjanja',
       component: () => import('../views/DogadjanjaView.vue')
     },
-    /*
+
     {
       path: '/forum',
       name: 'forum',
       component: () => import('../views/ForumView.vue')
     },
+    {
+      path: '/forum/tema/:id',
+      name: 'forum-topic',
+      component: () => import('../views/ForumTopicView.vue')
+    }
+        /*
     {
       path: '/prijava',
       name: 'prijava',
