@@ -9,19 +9,21 @@ const router = createRouter({
       name: 'home',
       component: HomeView
     },
-     {
+    {
       path: '/katalog',
       name: 'katalog',
-      // Koristimo lazy-loading za ovu rutu
       component: () => import('../views/KatalogView.vue')
     },
-
+    {
+      path: '/katalog/:type/:id',
+      name: 'katalog-detalji',
+      component: () => import('../views/KatalogDetailView.vue')
+    },
     {
       path: '/dogadjanja',
       name: 'dogadjanja',
       component: () => import('../views/DogadjanjaView.vue')
     },
-
     {
       path: '/forum',
       name: 'forum',
@@ -31,14 +33,31 @@ const router = createRouter({
       path: '/forum/tema/:id',
       name: 'forum-topic',
       component: () => import('../views/ForumTopicView.vue')
-    }
-        /*
+    },
     {
       path: '/prijava',
-      name: 'prijava',
+      name: 'auth',
       component: () => import('../views/AuthView.vue')
-    } */
+    },
+    {
+      path: '/profil',
+      name: 'profil',
+      component: () => import('../views/ProfileView.vue'),
+      meta: { requiresAuth: true }
+    }
   ]
 })
+
+
+router.beforeEach((to, from, next) => {
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
+  const user = localStorage.getItem('user');
+  
+  if (requiresAuth && !user) {
+    next('/prijava');
+  } else {
+    next();
+  }
+});
 
 export default router

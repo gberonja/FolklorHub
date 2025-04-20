@@ -12,35 +12,27 @@
 
           <!-- Navigation Links -->
           <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-            <router-link
-              to="/"
+            <router-link to="/"
               class="border-transparent text-gray-700 hover:text-red-600 border-b-2 hover:border-red-600 h-full inline-flex items-center px-1 pt-1 text-sm font-medium"
-              :class="{ 'border-red-600 text-red-600': $route.path === '/' }"
-            >
+              :class="{ 'border-red-600 text-red-600': $route.path === '/' }">
               Početna
             </router-link>
 
-            <router-link
-              to="/katalog"
+            <router-link to="/katalog"
               class="border-transparent text-gray-700 hover:text-red-600 border-b-2 hover:border-red-600 h-full inline-flex items-center px-1 pt-1 text-sm font-medium"
-              :class="{ 'border-red-600 text-red-600': $route.path.includes('katalog') }"
-            >
+              :class="{ 'border-red-600 text-red-600': $route.path.includes('katalog') }">
               Katalog
             </router-link>
 
-            <router-link
-              to="/dogadjanja"
+            <router-link to="/dogadjanja"
               class="border-transparent text-gray-700 hover:text-red-600 border-b-2 hover:border-red-600 h-full inline-flex items-center px-1 pt-1 text-sm font-medium"
-              :class="{ 'border-red-600 text-red-600': $route.path.includes('dogadjanja') }"
-            >
+              :class="{ 'border-red-600 text-red-600': $route.path.includes('dogadjanja') }">
               Događanja
             </router-link>
 
-            <router-link
-              to="/forum"
+            <router-link to="/forum"
               class="border-transparent text-gray-700 hover:text-red-600 border-b-2 hover:border-red-600 h-full inline-flex items-center px-1 pt-1 text-sm font-medium"
-              :class="{ 'border-red-600 text-red-600': $route.path.includes('forum') }"
-            >
+              :class="{ 'border-red-600 text-red-600': $route.path.includes('forum') }">
               Forum
             </router-link>
           </div>
@@ -56,35 +48,23 @@
     <!-- Mobilni meni -->
     <div class="sm:hidden">
       <div class="pt-2 pb-3 space-y-1">
-        <router-link
-          to="/"
-          class="block px-3 py-2 text-base font-medium hover:bg-gray-100"
-          :class="{ 'text-red-600': $route.path === '/' }"
-        >
+        <router-link to="/" class="block px-3 py-2 text-base font-medium hover:bg-gray-100"
+          :class="{ 'text-red-600': $route.path === '/' }">
           Početna
         </router-link>
 
-        <router-link
-          to="/katalog"
-          class="block px-3 py-2 text-base font-medium hover:bg-gray-100"
-          :class="{ 'text-red-600': $route.path.includes('katalog') }"
-        >
+        <router-link to="/katalog" class="block px-3 py-2 text-base font-medium hover:bg-gray-100"
+          :class="{ 'text-red-600': $route.path.includes('katalog') }">
           Katalog
         </router-link>
 
-        <router-link
-          to="/dogadjanja"
-          class="block px-3 py-2 text-base font-medium hover:bg-gray-100"
-          :class="{ 'text-red-600': $route.path.includes('dogadjanja') }"
-        >
+        <router-link to="/dogadjanja" class="block px-3 py-2 text-base font-medium hover:bg-gray-100"
+          :class="{ 'text-red-600': $route.path.includes('dogadjanja') }">
           Događanja
         </router-link>
 
-        <router-link
-          to="/forum"
-          class="block px-3 py-2 text-base font-medium hover:bg-gray-100"
-          :class="{ 'text-red-600': $route.path.includes('forum') }"
-        >
+        <router-link to="/forum" class="block px-3 py-2 text-base font-medium hover:bg-gray-100"
+          :class="{ 'text-red-600': $route.path.includes('forum') }">
           Forum
         </router-link>
       </div>
@@ -95,5 +75,58 @@
 <script>
 export default {
   name: 'Navbar',
-}
+  data() {
+    return {
+      showProfileMenu: false,
+      isLoggedIn: false,
+      user: null
+    };
+  },
+  computed: {
+    userInitials() {
+      if (!this.user || !this.user.displayName) return 'U';
+      const names = this.user.displayName.split(' ');
+      if (names.length >= 2) {
+        return (names[0][0] + names[1][0]).toUpperCase();
+      }
+      return names[0][0].toUpperCase();
+    }
+  },
+  methods: {
+    toggleProfileMenu() {
+      this.showProfileMenu = !this.showProfileMenu;
+    },
+    logout() {
+      // Obrišite korisnika iz localStorage
+      localStorage.removeItem('user');
+      this.isLoggedIn = false;
+      this.user = null;
+      this.showProfileMenu = false;
+
+      // Preusmjerite na stranicu za prijavu
+      this.$router.push('/prijava');
+    },
+    checkLoginStatus() {
+      const userString = localStorage.getItem('user');
+      if (userString) {
+        this.user = JSON.parse(userString);
+        this.isLoggedIn = true;
+      } else {
+        this.isLoggedIn = false;
+        this.user = null;
+      }
+    }
+  },
+  mounted() {
+    // Provjera statusa prijave kada se komponenta učita
+    this.checkLoginStatus();
+
+    // Slušanje promjena u localStorage
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'user') {
+        this.checkLoginStatus();
+      }
+    });
+  }
+};
 </script>
