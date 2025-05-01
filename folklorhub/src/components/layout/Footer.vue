@@ -25,10 +25,7 @@
               </router-link>
             </li>
             <li>
-              <router-link
-                to="/dogadjanja"
-                class="text-gray-300 hover:text-white transition-colors"
-              >
+              <router-link to="/dogadjanja" class="text-gray-300 hover:text-white transition-colors">
                 Kalendar događanja
               </router-link>
             </li>
@@ -40,7 +37,6 @@
           </ul>
         </div>
 
-        <!-- Footer.vue (nastavak) -->
         <!-- Kontakt -->
         <div>
           <h3 class="text-lg font-semibold mb-4">Kontakt</h3>
@@ -72,14 +68,14 @@
       </div>
 
       <div class="mt-8 pt-8 border-t border-gray-700 text-center text-gray-400">
-        <p>&copy; {{ new Date().getFullYear() }} FolklorHub. Sva prava pridržana.</p>
+        <p>&copy; {{ currentYear }} FolklorHub. Sva prava pridržana.</p>
       </div>
     </div>
   </footer>
 </template>
 
-<script>
-export default {
-  name: 'Footer',
-}
+<script setup>
+import { computed } from 'vue'
+
+const currentYear = computed(() => new Date().getFullYear())
 </script>
