@@ -37,6 +37,11 @@
                                 class="px-6 py-3 border-b-2 font-medium text-sm">
                                 Profil
                             </button>
+                            <button @click="activeTab = 'favorites'"
+                                :class="{ 'border-red-600 text-red-600': activeTab === 'favorites' }"
+                                class="px-6 py-3 border-b-2 font-medium text-sm">
+                                Favoriti
+                            </button>
                             <button @click="activeTab = 'topics'"
                                 :class="{ 'border-red-600 text-red-600': activeTab === 'topics' }"
                                 class="px-6 py-3 border-b-2 font-medium text-sm">
@@ -109,6 +114,12 @@
                                 </button>
                             </div>
                         </form>
+                    </div>
+
+                    <!-- Favoriti tab -->
+                    <div v-if="activeTab === 'favorites'">
+                        <h2 class="text-xl font-bold mb-6">Moji favoriti</h2>
+                        <user-favorites :user-id="user.id" @update="handleFavoritesUpdate" />
                     </div>
 
                     <!-- Moje teme tab -->
@@ -227,146 +238,190 @@
     </div>
 </template>
 
-<script>
-export default {
-    name: 'ProfileView',
-    data() {
-        return {
-            loading: false,
-            activeTab: 'profile',
-            showDeleteModal: false,
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+import { useForumStore } from '@/stores/forum'
+import UserFavorites from '@/components/user/UserFavorites.vue'
 
-            user: {
-                email: '',
-                displayName: '',
-                bio: '',
-                location: '',
-                experience: '',
-                joinedDate: '',
-                photoURL: ''
-            },
+const router = useRouter()
+const userStore = useUserStore()
+const forumStore = useForumStore()
 
-            profileForm: {
-                displayName: '',
-                bio: '',
-                location: '',
-                experience: ''
-            },
+const loading = ref(false)
+const activeTab = ref('profile')
+const showDeleteModal = ref(false)
 
-            passwordForm: {
-                currentPassword: '',
-                newPassword: '',
-                confirmPassword: ''
-            },
-            
-            userTopics: [
-                {
-                    id: '1',
-                    title: 'Pomoć oko koraka za Linđo',
-                    description: 'Pozdrav svima! Nedavno sam se pridružio/la folklornom ansamblu i učim plesati Linđo...',
-                    createdAt: '2025-05-10T14:30:00',
-                    commentsCount: 5
-                }
-            ],
+const user = ref({
+    id: '',
+    email: '',
+    displayName: '',
+    bio: '',
+    location: '',
+    experience: '',
+    joinedDate: '',
+    photoURL: ''
+})
 
-            userComments: [
-                {
-                    id: '1',
-                    topicId: '2',
-                    topicTitle: 'Gdje nabaviti narodne nošnje?',
-                    content: 'Preporučujem obrtničku radionicu "Narodno blago" u Osijeku...',
-                    createdAt: '2025-05-05T11:20:00'
-                }
-            ]
-        };
-    },
-    computed: {
-        userInitials() {
-            if (!this.user.displayName) return '';
+const profileForm = ref({
+    displayName: '',
+    bio: '',
+    location: '',
+    experience: ''
+})
 
-            const names = this.user.displayName.split(' ');
-            if (names.length >= 2) {
-                return (names[0][0] + names[1][0]).toUpperCase();
-            }
-            return names[0][0].toUpperCase();
-        }
-    },
-    methods: {
-        formatDate(dateString) {
-            if (!dateString) return '';
+const passwordForm = ref({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+})
 
-            const date = new Date(dateString);
-            return date.toLocaleDateString('hr-HR', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-            });
-        },
+const userTopics = ref([])
+const userComments = ref([])
 
-        updateProfile() {
-            this.loading = true;
+const userInitials = computed(() => {
+    if (!user.value.displayName) return '';
 
-            setTimeout(() => {
-                const userData = {
-                    ...this.user,
-                    ...this.profileForm
-                };
-
-                localStorage.setItem('user', JSON.stringify(userData));
-                this.user = userData;
-
-                this.loading = false;
-                alert('Profil uspješno ažuriran!');
-            }, 1000);
-        },
-
-        changePassword() {
-            if (this.passwordForm.newPassword !== this.passwordForm.confirmPassword) {
-                alert('Lozinke se ne podudaraju!');
-                return;
-            }
-
-            if (this.passwordForm.newPassword.length < 6) {
-                alert('Nova lozinka mora imati barem 6 znakova!');
-                return;
-            }
-
-            alert('Lozinka uspješno promijenjena!');
-            this.passwordForm = {
-                currentPassword: '',
-                newPassword: '',
-                confirmPassword: ''
-            };
-        },
-
-        deleteAccount() {
-            localStorage.removeItem('user');
-            this.$router.push('/');
-            alert('Račun je uspješno obrisan.');
-        },
-
-        loadUserData() {
-            const userString = localStorage.getItem('user');
-            if (userString) {
-                const userData = JSON.parse(userString);
-                this.user = {
-                    ...this.user,
-                    ...userData,
-                    joinedDate: userData.joinedDate || new Date().toISOString()
-                };
-
-
-                this.profileForm = {
-                    displayName: this.user.displayName || '',
-                    bio: this.user.bio || '',
-                    location: this.user.location || '',
-                    experience: this.user.experience || ''
-                };
-            }
-        }
-    },
-    mounted() {
-        this.loadUserData();
+    const names = user.value.displayName.split(' ');
+    if (names.length >= 2) {
+        return (names[0][0] + names[1][0]).toUpperCase();
     }
-};
+    return names[0][0].toUpperCase();
+})
+
+
+const formatDate = (dateString) => {
+    if (!dateString) return '';
+
+    const date = new Date(dateString);
+    return date.toLocaleDateString('hr-HR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+}
+
+const updateProfile = async () => {
+    try {
+        loading.value = true;
+
+        const result = await userStore.updateProfile(profileForm.value);
+
+        if (result.success) {
+            user.value = {
+                ...user.value,
+                ...profileForm.value
+            };
+            alert('Profil uspješno ažuriran!');
+        } else {
+            alert(`Greška: ${result.error || 'Nije moguće ažurirati profil'}`);
+        }
+    } catch (err) {
+        console.error('Error updating profile:', err);
+        alert('Došlo je do greške prilikom ažuriranja profila.');
+    } finally {
+        loading.value = false;
+    }
+}
+
+const changePassword = async () => {
+    if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
+        alert('Lozinke se ne podudaraju!');
+        return;
+    }
+
+    if (passwordForm.value.newPassword.length < 6) {
+        alert('Nova lozinka mora imati barem 6 znakova!');
+        return;
+    }
+
+
+    try {
+        loading.value = true;
+
+
+        alert('Lozinka uspješno promijenjena!');
+
+
+        passwordForm.value = {
+            currentPassword: '',
+            newPassword: '',
+            confirmPassword: ''
+        };
+    } catch (err) {
+        console.error('Error changing password:', err);
+        alert('Došlo je do greške prilikom promjene lozinke.');
+    } finally {
+        loading.value = false;
+    }
+}
+
+const deleteAccount = async () => {
+    try {
+        loading.value = true;
+
+
+
+
+        await userStore.logout();
+
+
+        router.push('/');
+
+        alert('Račun je uspješno obrisan.');
+    } catch (err) {
+        console.error('Error deleting account:', err);
+        alert('Došlo je do greške prilikom brisanja računa.');
+    } finally {
+        loading.value = false;
+        showDeleteModal.value = false;
+    }
+}
+
+const loadUserData = async () => {
+    try {
+        if (!userStore.isAuthenticated) {
+            router.push('/prijava');
+            return;
+        }
+
+        user.value = { ...userStore.user };
+
+        profileForm.value = {
+            displayName: user.value.displayName || '',
+            bio: user.value.bio || '',
+            location: user.value.location || '',
+            experience: user.value.experience || ''
+        };
+
+
+        await loadUserContent();
+    } catch (err) {
+        console.error('Error loading user data:', err);
+    }
+}
+
+const loadUserContent = async () => {
+    try {
+        loading.value = true;
+
+        const { topics, comments } = await forumStore.getUserContent(user.value.id);
+
+        userTopics.value = topics || [];
+        userComments.value = comments || [];
+    } catch (err) {
+        console.error('Error loading user content:', err);
+    } finally {
+        loading.value = false;
+    }
+}
+
+const handleFavoritesUpdate = () => {
+
+}
+
+onMounted(() => {
+    loadUserData();
+})
 </script>
