@@ -104,14 +104,18 @@ export const useUserStore = defineStore('user', () => {
       
       const { data, error: registerError } = await supabase.auth.signUp({
         email,
-        password
+        password,
+        options: {
+          data: {
+            display_name: displayName
+          }
+        }
       })
       
       if (registerError) throw registerError
       
 
       if (data.user && !data.session) {
-
         return { 
           success: true, 
           message: 'Provjerite email za potvrdu registracije.' 
@@ -167,7 +171,7 @@ export const useUserStore = defineStore('user', () => {
       
       if (updateError) throw updateError
       
- 
+
       user.value = {
         ...user.value,
         displayName: profileData.displayName,
@@ -198,12 +202,12 @@ export const useUserStore = defineStore('user', () => {
         throw new Error('Možete uploadati samo slike')
       }
       
-
+ 
       if (file.size > 5 * 1024 * 1024) {
         throw new Error('Slika ne smije biti veća od 5MB')
       }
       
-
+  
       const fileExt = file.name.split('.').pop()
       const fileName = `${user.value.id}-${Date.now()}.${fileExt}`
       const filePath = `avatars/${fileName}`
@@ -303,14 +307,6 @@ export const useUserStore = defineStore('user', () => {
       const userId = user.value.id
       
 
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', userId)
-      
-      if (profileError) throw profileError
-      
-
       if (user.value.photoURL) {
         try {
           const fileName = user.value.photoURL.split('/').pop()
@@ -322,12 +318,13 @@ export const useUserStore = defineStore('user', () => {
         }
       }
       
-      const { error: deleteError } = await supabase.auth.admin.deleteUser(userId)
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId)
       
-      
-      if (deleteError) {
-        console.warn('Could not delete auth user:', deleteError)
-      }
+      if (profileError) throw profileError
       
 
       await supabase.auth.signOut()
@@ -364,7 +361,6 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
- 
   fetchUser()
 
   return { 
