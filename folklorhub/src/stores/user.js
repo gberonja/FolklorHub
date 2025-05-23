@@ -21,7 +21,15 @@ export const useUserStore = defineStore('user', () => {
           .eq('id', supabaseUser.id)
           .single()
 
-        if (profileError) throw profileError
+        if (profileError && profileError.code !== 'PGRST116') {
+          throw profileError
+        }
+
+
+        if (!data) {
+          await createUserProfile(supabaseUser)
+          return fetchUser() 
+        }
 
         user.value = {
           id: supabaseUser.id,
@@ -30,8 +38,9 @@ export const useUserStore = defineStore('user', () => {
           bio: data?.bio || '',
           location: data?.location || '',
           experience: data?.experience || '',
-          joinedDate: data?.created_at || new Date().toISOString(),
-          photoURL: data?.avatar_url || ''
+          joinedDate: data?.created_at || supabaseUser.created_at,
+          photoURL: data?.avatar_url || '',
+          isEmailVerified: supabaseUser.email_confirmed_at !== null
         }
       }
     } catch (err) {
@@ -39,6 +48,29 @@ export const useUserStore = defineStore('user', () => {
       error.value = err.message
     } finally {
       loading.value = false
+    }
+  }
+
+  async function createUserProfile(supabaseUser) {
+    try {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([
+          {
+            id: supabaseUser.id,
+            display_name: supabaseUser.email.split('@')[0],
+            avatar_url: '',
+            bio: '',
+            location: '',
+            experience: '',
+            created_at: new Date().toISOString()
+          }
+        ])
+      
+      if (profileError) throw profileError
+    } catch (err) {
+      console.error('Error creating user profile:', err)
+      throw err
     }
   }
 
@@ -78,22 +110,12 @@ export const useUserStore = defineStore('user', () => {
       if (registerError) throw registerError
       
 
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert([
-            {
-              id: data.user.id,
-              display_name: displayName,
-              avatar_url: '',
-              bio: '',
-              location: '',
-              experience: '',
-              created_at: new Date().toISOString()
-            }
-          ])
-        
-        if (profileError) throw profileError
+      if (data.user && !data.session) {
+
+        return { 
+          success: true, 
+          message: 'Provjerite email za potvrdu registracije.' 
+        }
       }
       
       await fetchUser()
@@ -128,6 +150,7 @@ export const useUserStore = defineStore('user', () => {
   async function updateProfile(profileData) {
     try {
       loading.value = true
+      error.value = null
       
       if (!user.value) throw new Error('Korisnik nije prijavljen')
       
@@ -137,15 +160,20 @@ export const useUserStore = defineStore('user', () => {
           display_name: profileData.displayName,
           bio: profileData.bio,
           location: profileData.location,
-          experience: profileData.experience
+          experience: profileData.experience,
+          updated_at: new Date().toISOString()
         })
         .eq('id', user.value.id)
       
       if (updateError) throw updateError
       
+ 
       user.value = {
         ...user.value,
-        ...profileData
+        displayName: profileData.displayName,
+        bio: profileData.bio,
+        location: profileData.location,
+        experience: profileData.experience
       }
       
       return { success: true }
@@ -158,7 +186,185 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  async function uploadAvatar(file) {
+    try {
+      loading.value = true
+      error.value = null
+      
+      if (!user.value) throw new Error('Korisnik nije prijavljen')
+      
 
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Možete uploadati samo slike')
+      }
+      
+
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error('Slika ne smije biti veća od 5MB')
+      }
+      
+
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${user.value.id}-${Date.now()}.${fileExt}`
+      const filePath = `avatars/${fileName}`
+      
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('profiles')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+      
+      if (uploadError) throw uploadError
+      
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('profiles')
+        .getPublicUrl(filePath)
+      
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          avatar_url: publicUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.value.id)
+      
+      if (updateError) throw updateError
+      
+
+      if (user.value.photoURL) {
+        try {
+          const oldPath = user.value.photoURL.split('/').pop()
+          if (oldPath && oldPath !== fileName) {
+            await supabase.storage
+              .from('profiles')
+              .remove([`avatars/${oldPath}`])
+          }
+        } catch (err) {
+          console.warn('Could not delete old avatar:', err)
+        }
+      }
+      
+
+      user.value.photoURL = publicUrl
+      
+      return { success: true, url: publicUrl }
+    } catch (err) {
+      console.error('Avatar upload error:', err)
+      error.value = err.message
+      return { success: false, error: err.message }
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function changePassword(currentPassword, newPassword) {
+    try {
+      loading.value = true
+      error.value = null
+      
+      if (!user.value) throw new Error('Korisnik nije prijavljen')
+      
+
+      const { error: reauthError } = await supabase.auth.signInWithPassword({
+        email: user.value.email,
+        password: currentPassword
+      })
+      
+      if (reauthError) throw new Error('Trenutna lozinka nije ispravna')
+      
+
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+      
+      if (updateError) throw updateError
+      
+      return { success: true }
+    } catch (err) {
+      console.error('Password change error:', err)
+      error.value = err.message
+      return { success: false, error: err.message }
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function deleteAccount() {
+    try {
+      loading.value = true
+      error.value = null
+      
+      if (!user.value) throw new Error('Korisnik nije prijavljen')
+      
+      const userId = user.value.id
+      
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId)
+      
+      if (profileError) throw profileError
+      
+
+      if (user.value.photoURL) {
+        try {
+          const fileName = user.value.photoURL.split('/').pop()
+          await supabase.storage
+            .from('profiles')
+            .remove([`avatars/${fileName}`])
+        } catch (err) {
+          console.warn('Could not delete avatar:', err)
+        }
+      }
+      
+      const { error: deleteError } = await supabase.auth.admin.deleteUser(userId)
+      
+      
+      if (deleteError) {
+        console.warn('Could not delete auth user:', deleteError)
+      }
+      
+
+      await supabase.auth.signOut()
+      user.value = null
+      
+      return { success: true }
+    } catch (err) {
+      console.error('Account deletion error:', err)
+      error.value = err.message
+      return { success: false, error: err.message }
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function sendPasswordReset(email) {
+    try {
+      loading.value = true
+      error.value = null
+      
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`
+      })
+      
+      if (resetError) throw resetError
+      
+      return { success: true }
+    } catch (err) {
+      console.error('Password reset error:', err)
+      error.value = err.message
+      return { success: false, error: err.message }
+    } finally {
+      loading.value = false
+    }
+  }
+
+ 
   fetchUser()
 
   return { 
@@ -170,6 +376,10 @@ export const useUserStore = defineStore('user', () => {
     register,
     logout,
     updateProfile,
+    uploadAvatar,
+    changePassword,
+    deleteAccount,
+    sendPasswordReset,
     fetchUser
   }
 })
