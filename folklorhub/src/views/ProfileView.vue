@@ -459,22 +459,23 @@ const handleAvatarUpload = async (event) => {
         const result = await userStore.uploadAvatar(file)
 
         if (result.success) {
-            user.value = {
-                ...user.value,
-                ...profileForm.value
-            };
-            successMessage.value = 'Profil uspješno ažuriran!'
+            user.value.photoURL = result.url // Ažuriraj sliku u UI
+            successMessage.value = 'Profilna slika uspješno ažurirana!'
             clearMessages()
         } else {
-            errorMessage.value = `Greška: ${result.error || 'Nije moguće ažurirati profil'}`
+            errorMessage.value = `Greška: ${result.error || 'Nije moguće ažurirati sliku'}`
             clearMessages()
         }
     } catch (err) {
-        console.error('Error updating profile:', err);
-        errorMessage.value = 'Došlo je do greške prilikom ažuriranja profila.'
+        console.error('Error uploading avatar:', err);
+        errorMessage.value = 'Došlo je do greške prilikom učitavanja slike.'
         clearMessages()
     } finally {
-        loading.value = false;
+        avatarUploading.value = false;
+        // Reset input
+        if (avatarInput.value) {
+            avatarInput.value.value = '';
+        }
     }
 }
 
@@ -595,8 +596,35 @@ const loadUserContent = async () => {
 }
 
 const handleFavoritesUpdate = () => {
-    // Refresh favorites when updated
     catalogStore.fetchFavorites()
+}
+
+const updateProfile = async () => {
+    try {
+        loading.value = true;
+        errorMessage.value = ''
+        successMessage.value = ''
+
+        const result = await userStore.updateProfile(profileForm.value);
+
+        if (result.success) {
+            user.value = {
+                ...user.value,
+                ...profileForm.value
+            };
+            successMessage.value = 'Profil uspješno ažuriran!'
+            clearMessages()
+        } else {
+            errorMessage.value = `Greška: ${result.error || 'Nije moguće ažurirati profil'}`
+            clearMessages()
+        }
+    } catch (err) {
+        console.error('Error updating profile:', err);
+        errorMessage.value = 'Došlo je do greške prilikom ažuriranja profila.'
+        clearMessages()
+    } finally {
+        loading.value = false;
+    }
 }
 
 onMounted(() => {
