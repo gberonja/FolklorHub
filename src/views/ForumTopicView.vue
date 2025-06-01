@@ -399,7 +399,7 @@ const deleteTopic = async () => {
 }
 
 const deleteCommentPrompt = (comment) => {
-  commentToDelete = ref(comment)
+  commentToDelete.value = comment
 }
 
 const deleteComment = async () => {
