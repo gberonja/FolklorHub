@@ -78,8 +78,7 @@
         </svg>
         <h3 class="text-xl font-semibold mb-2">Nema tema za prikaz</h3>
         <p class="text-gray-600 mb-4">
-          {{ searchQuery ? 'Nije pronađena niti jedna tema koja odgovara vašem pretraživanju.' : 'Trenutno nema tema na
-          forumu.' }}
+          {{ getNoTopicsMessage() }}
         </p>
         <button @click="resetSearch" class="btn btn-primary">
           {{ searchQuery ? 'Resetiraj pretraživanje' : 'Kreiraj novu temu' }}
@@ -180,7 +179,6 @@ const loading = computed(() => forumStore.loading)
 const filteredTopics = computed(() => {
   let result = searchQuery.value ? searchResults.value : forumStore.topics
 
-
   if (selectedTags.value.length > 0) {
     result = result.filter(topic =>
       topic.tags && topic.tags.some(tag =>
@@ -222,6 +220,13 @@ const popularTags = computed(() => {
 })
 
 
+const getNoTopicsMessage = () => {
+  if (searchQuery.value) {
+    return 'Nije pronađena niti jedna tema koja odgovara vašem pretraživanju.'
+  }
+  return 'Trenutno nema tema na forumu.'
+}
+
 const resetSearch = () => {
   searchQuery.value = ''
   searchResults.value = []
@@ -260,7 +265,6 @@ const createNewTopic = async () => {
 
     if (result.success) {
       closeNewTopicModal()
-
       router.push(`/forum/tema/${result.topicId}`)
     } else {
       createError.value = result.error || 'Greška prilikom stvaranja teme. Pokušajte ponovno.'
@@ -308,8 +312,7 @@ onMounted(async () => {
   }
 })
 
-
+// Watchers
 watch(sortBy, () => {
-
 })
 </script>
