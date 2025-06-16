@@ -78,11 +78,11 @@ router.beforeEach(async (to, from, next) => {
   }
 })
 
-// Router guard for authentication
+
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
   
-  // Wait for user authentication check to complete
+
   if (userStore.loading) {
     await new Promise(resolve => {
       const unwatch = userStore.$subscribe((mutation, state) => {
@@ -95,11 +95,11 @@ router.beforeEach(async (to, from, next) => {
   }
   
   if (to.meta.requiresAuth && !userStore.isAuthenticated) {
-    // Show a toast message for better UX
+
     console.log('Redirecting to login: authentication required')
     next({ name: 'auth', query: { redirect: to.fullPath } })
   } else if (to.meta.guestOnly && userStore.isAuthenticated) {
-    // If trying to access login page while authenticated, redirect to profile
+  
     next({ name: 'profil' })
   } else {
     next()

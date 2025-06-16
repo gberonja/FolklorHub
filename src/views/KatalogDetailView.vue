@@ -121,15 +121,16 @@
               </p>
 
               <p class="mb-6 text-gray-700">
-                {{
-                  item.type === 'ples'
-                    ? 'Ovaj ples je karakterističan za tradicijski izričaj svoje regije i često se izvodi na lokalnim
-                festivalima i kulturnim manifestacijama.Ima bogatu povijest koja seže duboko u prošlost hrvatske
-                kulturne baštine.'
-                : 'Ova pjesma je karakteristična za tradicijski izričaj svoje regije i često se izvodi na lokalnim
-                festivalima i kulturnim manifestacijama.Ima bogatu povijest koja seže duboko u prošlost hrvatske
-                kulturne baštine.'
-                }}
+                <span v-if="item.type === 'ples'">
+                  Ovaj ples je karakterističan za tradicijski izričaj svoje regije i često se izvodi na lokalnim
+                  festivalima i kulturnim manifestacijama. Ima bogatu povijest koja seže duboko u prošlost hrvatske
+                  kulturne baštine.
+                </span>
+                <span v-else>
+                  Ova pjesma je karakteristična za tradicijski izričaj svoje regije i često se izvodi na lokalnim
+                  festivalima i kulturnim manifestacijama. Ima bogatu povijest koja seže duboko u prošlost hrvatske
+                  kulturne baštine.
+                </span>
               </p>
 
               <!-- Video -->
@@ -189,13 +190,14 @@
               <!-- Dodatne informacije -->
               <h3 class="text-lg font-semibold mb-3">Dodatne informacije</h3>
               <p class="text-gray-700 mb-6">
-                {{
-                  item.type === 'ples'
-                    ? 'Želite li naučiti ovaj ples? Provjerite raspored radionica u našem kalendaru događanja ili se
-                pridružite diskusiji na forumu gdje možete pronaći više informacija i savjete iskusnih plesača.'
-                : 'Želite li naučiti ovu pjesmu? Provjerite raspored radionica u našem kalendaru događanja ili se
-                pridružite diskusiji na forumu gdje možete pronaći više informacija i savjete iskusnih izvođača.'
-                }}
+                <span v-if="item.type === 'ples'">
+                  Želite li naučiti ovaj ples? Provjerite raspored radionica u našem kalendaru događanja ili se
+                  pridružite diskusiji na forumu gdje možete pronaći više informacija i savjete iskusnih plesača.
+                </span>
+                <span v-else>
+                  Želite li naučiti ovu pjesmu? Provjerite raspored radionica u našem kalendaru događanja ili se
+                  pridružite diskusiji na forumu gdje možete pronaći više informacija i savjete iskusnih izvođača.
+                </span>
               </p>
 
               <!-- Povezani sadržaj -->
@@ -312,12 +314,12 @@ const fetchItemDetails = async () => {
 
 const fetchRelatedContent = async () => {
   try {
-    
+
     relatedEvents.value = eventsStore.events
       .filter(event => event.location && event.location.toLowerCase().includes(item.value.regionName.toLowerCase()))
       .slice(0, 2)
 
-  
+
     relatedTopics.value = forumStore.topics
       .filter(topic =>
         topic.title.toLowerCase().includes(item.value.name.toLowerCase()) ||
@@ -356,7 +358,7 @@ const shareItem = () => {
         console.error('Greška kod dijeljenja:', err)
       })
   } else {
-    
+
     const url = window.location.href
     navigator.clipboard.writeText(url).then(() => {
       alert('Link je kopiran u međuspremnik!')
