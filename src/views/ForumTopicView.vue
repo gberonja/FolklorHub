@@ -230,6 +230,7 @@ import { useForumStore } from '@/stores/forum'
 import { useUserStore } from '@/stores/user'
 import { format, parseISO } from 'date-fns'
 import { hr } from 'date-fns/locale'
+import { supabase } from '@/supabase'
 import ForumComment from '@/components/forum/ForumComment.vue'
 
 const route = useRoute()
@@ -294,7 +295,6 @@ const addComment = async () => {
     commenting.value = true
     commentError.value = ''
 
-
     let content = newComment.value
     if (replyToCommentId.value) {
       const replyComment = comments.value.find((c) => c.id === replyToCommentId.value)
@@ -308,8 +308,7 @@ const addComment = async () => {
     if (result.success) {
       newComment.value = ''
       replyToCommentId.value = null
-
-
+      // Osvježi podatke teme
       await fetchTopicData()
     } else {
       commentError.value = result.error || 'Greška prilikom dodavanja komentara. Pokušajte ponovno.'
@@ -319,23 +318,6 @@ const addComment = async () => {
     commentError.value = 'Došlo je do greške. Pokušajte ponovno kasnije.'
   } finally {
     commenting.value = false
-  }
-}
-
-const toggleLike = async (commentId) => {
-  if (!userStore.isAuthenticated) {
-    router.push(`/prijava?redirect=/forum/tema/${topicId.value}`)
-    return
-  }
-
-  try {
-    const result = await forumStore.toggleCommentLike(commentId, topicId.value)
-
-    if (!result.success) {
-      console.error('Error toggling like:', result.error)
-    }
-  } catch (error) {
-    console.error('Error toggling like:', error)
   }
 }
 
@@ -458,6 +440,25 @@ const fetchTopicData = async () => {
     console.error('Error fetching topic:', error)
   } finally {
     loading.value = false
+  }
+}
+
+const toggleLike = async (commentId) => {
+  if (!userStore.isAuthenticated) {
+    router.push(`/prijava?redirect=/forum/tema/${topicId.value}`)
+    return
+  }
+
+  try {
+    const result = await forumStore.toggleCommentLike(commentId, topicId.value)
+
+    if (result.success) {
+      await fetchTopicData()
+    } else {
+      console.error('Error toggling like:', result.error)
+    }
+  } catch (error) {
+    console.error('Error toggling like:', error)
   }
 }
 
