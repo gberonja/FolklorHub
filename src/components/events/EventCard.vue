@@ -72,7 +72,7 @@
   
   defineEmits(['view-details'])
   
-  // Formatiranje datuma
+
   const formatDay = computed(() => {
     return new Date(props.event.date).getDate()
   })
@@ -89,7 +89,7 @@
     return new Date(props.event.date).getFullYear()
   })
   
-  // Tipovi događaja
+
   const typeLabel = computed(() => {
     switch (props.event.type) {
       case 'smotra':

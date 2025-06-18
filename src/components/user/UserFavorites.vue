@@ -142,23 +142,23 @@ const catalogStore = useCatalogStore()
 const loading = ref(true)
 const removing = ref(null)
 const searchQuery = ref('')
-const filterType = ref('all') // 'all', 'ples', 'pjesma'
+const filterType = ref('all')
 
-// Get favorite items from store
+
 const favoriteItems = computed(() => {
     return catalogStore.getFavoriteItems
 })
 
-// Filter favorites based on search and type
+
 const filteredFavorites = computed(() => {
     let items = favoriteItems.value
 
-    // Filter by type
+
     if (filterType.value !== 'all') {
         items = items.filter(item => item.type === filterType.value)
     }
 
-    // Filter by search query
+
     if (searchQuery.value.trim()) {
         const query = searchQuery.value.toLowerCase()
         items = items.filter(item =>
@@ -171,7 +171,7 @@ const filteredFavorites = computed(() => {
     return items
 })
 
-// Count favorites by type
+
 const danceCount = computed(() => {
     return favoriteItems.value.filter(item => item.type === 'ples').length
 })
@@ -180,7 +180,7 @@ const songCount = computed(() => {
     return favoriteItems.value.filter(item => item.type === 'pjesma').length
 })
 
-// Remove item from favorites
+
 const removeFromFavorites = async (item) => {
     try {
         removing.value = item.id
@@ -200,17 +200,17 @@ const removeFromFavorites = async (item) => {
     }
 }
 
-// Load data on component mount
+
 onMounted(async () => {
     try {
         loading.value = true
 
-        // Ensure catalog items are loaded
+
         if (catalogStore.items.length === 0) {
             await catalogStore.fetchItems()
         }
 
-        // Fetch user's favorites
+
         await catalogStore.fetchFavorites()
     } catch (error) {
         console.error('Error loading favorites:', error)
