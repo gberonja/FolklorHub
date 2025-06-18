@@ -196,8 +196,19 @@
           <button @click="showDeleteModal = false" class="btn btn-secondary">
             Odustani
           </button>
-          <button @click="deleteTopic" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
-            Izbriši temu
+          <button @click="deleteTopic" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+            :disabled="deleting">
+            <span v-if="deleting" class="flex items-center">
+              <svg class="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
+              </svg>
+              Brišem...
+            </span>
+            <span v-else>Izbriši temu</span>
           </button>
         </div>
       </div>
@@ -230,18 +241,20 @@ import { useForumStore } from '@/stores/forum'
 import { useUserStore } from '@/stores/user'
 import { format, parseISO } from 'date-fns'
 import { hr } from 'date-fns/locale'
-import { supabase } from '@/supabase'
 import ForumComment from '@/components/forum/ForumComment.vue'
+import { supabase } from '@/supabase'
 
 const route = useRoute()
 const router = useRouter()
 const forumStore = useForumStore()
 const userStore = useUserStore()
 
+// Reactive references
 const topicId = computed(() => route.params.id)
 const topic = ref(null)
 const comments = ref([])
 const loading = ref(true)
+const deleting = ref(false)
 const newComment = ref('')
 const commentError = ref('')
 const commenting = ref(false)
@@ -249,12 +262,12 @@ const replyToCommentId = ref(null)
 const showDeleteModal = ref(false)
 const commentToDelete = ref(null)
 
-
+// Computed properties
 const isTopicAuthor = computed(() => {
   return userStore.isAuthenticated && topic.value && topic.value.authorId === userStore.user.id
 })
 
-
+// Helper functions
 const formatDate = (dateString) => {
   if (!dateString) return ''
 
@@ -281,6 +294,7 @@ const isCommentAuthor = (comment) => {
   return userStore.isAuthenticated && comment.authorId === userStore.user.id
 }
 
+// Action functions
 const addComment = async () => {
   if (!userStore.isAuthenticated) {
     router.push(`/prijava?redirect=/forum/tema/${topicId.value}`)
@@ -295,6 +309,7 @@ const addComment = async () => {
     commenting.value = true
     commentError.value = ''
 
+    // Prepare content (add reply reference if needed)
     let content = newComment.value
     if (replyToCommentId.value) {
       const replyComment = comments.value.find((c) => c.id === replyToCommentId.value)
@@ -303,29 +318,63 @@ const addComment = async () => {
       }
     }
 
-    const result = await forumStore.addComment(topicId.value, content)
+    // Insert comment into database
+    const { data, error } = await supabase
+      .from('forum_comments')
+      .insert([{
+        topic_id: topicId.value,
+        user_id: userStore.user.id,
+        content: content.trim(),
+        created_at: new Date().toISOString()
+      }])
+      .select()
 
-    if (result.success) {
-      newComment.value = ''
-      replyToCommentId.value = null
-      // Osvježi podatke teme
-      await fetchTopicData()
-    } else {
-      commentError.value = result.error || 'Greška prilikom dodavanja komentara. Pokušajte ponovno.'
-    }
+    if (error) throw error
+
+    // Update topic comments count
+    const { error: updateError } = await supabase
+      .from('forum_topics')
+      .update({
+        comments_count: (topic.value.commentsCount || 0) + 1,
+        last_reply_at: new Date().toISOString()
+      })
+      .eq('id', topicId.value)
+
+    if (updateError) throw updateError
+
+    // Reset form
+    newComment.value = ''
+    replyToCommentId.value = null
+
+    // Reload topic data
+    await fetchTopicData()
   } catch (error) {
     console.error('Error adding comment:', error)
-    commentError.value = 'Došlo je do greške. Pokušajte ponovno kasnije.'
+    commentError.value = 'Došlo je do greške prilikom dodavanja komentara. Pokušajte ponovno.'
   } finally {
     commenting.value = false
   }
 }
 
+const toggleLike = async (commentId) => {
+  if (!userStore.isAuthenticated) {
+    router.push(`/prijava?redirect=/forum/tema/${topicId.value}`)
+    return
+  }
+
+  // Implement like functionality if needed
+  console.log('Toggle like for comment:', commentId)
+}
+
 const replyToComment = (comment) => {
   replyToCommentId.value = comment.id
   newComment.value = `@${comment.author}: `
-  document.querySelector('textarea').scrollIntoView({ behavior: 'smooth' })
-  document.querySelector('textarea').focus()
+  // Scroll to textarea
+  const textarea = document.querySelector('textarea')
+  if (textarea) {
+    textarea.scrollIntoView({ behavior: 'smooth' })
+    textarea.focus()
+  }
 }
 
 const shareThread = () => {
@@ -359,23 +408,38 @@ const deleteTopic = async () => {
   }
 
   try {
-    loading.value = true
+    deleting.value = true
 
+    // First delete all comments for this topic
+    const { error: commentsError } = await supabase
+      .from('forum_comments')
+      .delete()
+      .eq('topic_id', topicId.value)
 
-    const result = await supabase
+    if (commentsError) {
+      console.warn('Error deleting comments:', commentsError)
+      // Continue anyway, sometimes comments might not exist
+    }
+
+    // Delete the topic
+    const { error } = await supabase
       .from('forum_topics')
       .delete()
       .eq('id', topicId.value)
       .eq('user_id', userStore.user.id)
 
-    if (result.error) throw result.error
+    if (error) throw error
 
+    // Refresh the topics list in the store
+    await forumStore.fetchTopics()
+
+    // Redirect to forum with success message
     router.push('/forum')
   } catch (error) {
     console.error('Error deleting topic:', error)
     alert('Greška prilikom brisanja teme. Pokušajte ponovno.')
   } finally {
-    loading.value = false
+    deleting.value = false
     showDeleteModal.value = false
   }
 }
@@ -393,26 +457,26 @@ const deleteComment = async () => {
   try {
     loading.value = true
 
-
-    const result = await supabase
+    // Delete the comment
+    const { error } = await supabase
       .from('forum_comments')
       .delete()
       .eq('id', commentToDelete.value.id)
       .eq('user_id', userStore.user.id)
 
-    if (result.error) throw result.error
+    if (error) throw error
 
-
-    const updateResult = await supabase
+    // Update topic comments count
+    const { error: updateError } = await supabase
       .from('forum_topics')
       .update({
-        comments_count: topic.value.commentsCount - 1
+        comments_count: Math.max(0, (topic.value.commentsCount || 0) - 1)
       })
       .eq('id', topicId.value)
 
-    if (updateResult.error) throw updateResult.error
+    if (updateError) throw updateError
 
-
+    // Reload topic data
     await fetchTopicData()
   } catch (error) {
     console.error('Error deleting comment:', error)
@@ -427,42 +491,88 @@ const fetchTopicData = async () => {
   try {
     loading.value = true
 
-    const { topic: fetchedTopic, comments: fetchedComments } = await forumStore.getTopicWithComments(topicId.value)
+    // Fetch topic
+    const { data: topicData, error: topicError } = await supabase
+      .from('forum_topics')
+      .select('*')
+      .eq('id', topicId.value)
+      .single()
 
-    topic.value = fetchedTopic
-    comments.value = fetchedComments
+    if (topicError) throw topicError
 
+    // Get author name
+    let authorName = 'Nepoznati korisnik'
+    if (topicData.user_id) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('display_name')
+        .eq('id', topicData.user_id)
+        .single()
 
-    if (userStore.isAuthenticated) {
-      await forumStore.checkUserLikes(topicId.value)
+      if (profile) {
+        authorName = profile.display_name || 'Nepoznati korisnik'
+      }
     }
+
+    topic.value = {
+      id: topicData.id,
+      title: topicData.title,
+      description: topicData.description,
+      author: authorName,
+      authorId: topicData.user_id,
+      createdAt: topicData.created_at,
+      commentsCount: topicData.comments_count || 0,
+      tags: topicData.tags || []
+    }
+
+    // Fetch comments
+    const { data: commentsData, error: commentsError } = await supabase
+      .from('forum_comments')
+      .select('*')
+      .eq('topic_id', topicId.value)
+      .order('created_at', { ascending: true })
+
+    if (commentsError) throw commentsError
+
+    // Get comment authors
+    const commentsWithAuthors = await Promise.all(
+      commentsData.map(async (comment) => {
+        let authorName = 'Nepoznati korisnik'
+        if (comment.user_id) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('display_name')
+            .eq('id', comment.user_id)
+            .single()
+
+          if (profile) {
+            authorName = profile.display_name || 'Nepoznati korisnik'
+          }
+        }
+
+        return {
+          id: comment.id,
+          content: comment.content,
+          author: authorName,
+          authorId: comment.user_id,
+          createdAt: comment.created_at,
+          likes: 0, // Default for now
+          isLikedByUser: false // Default for now
+        }
+      })
+    )
+
+    comments.value = commentsWithAuthors
   } catch (error) {
     console.error('Error fetching topic:', error)
+    topic.value = null
+    comments.value = []
   } finally {
     loading.value = false
   }
 }
 
-const toggleLike = async (commentId) => {
-  if (!userStore.isAuthenticated) {
-    router.push(`/prijava?redirect=/forum/tema/${topicId.value}`)
-    return
-  }
-
-  try {
-    const result = await forumStore.toggleCommentLike(commentId, topicId.value)
-
-    if (result.success) {
-      await fetchTopicData()
-    } else {
-      console.error('Error toggling like:', result.error)
-    }
-  } catch (error) {
-    console.error('Error toggling like:', error)
-  }
-}
-
-
+// Lifecycle
 onMounted(() => {
   fetchTopicData()
 })

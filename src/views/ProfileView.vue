@@ -581,18 +581,23 @@ const loadUserData = async () => {
 }
 
 const loadUserContent = async () => {
-    try {
-        loading.value = true;
+  try {
+    loading.value = true;
 
-        const { topics, comments } = await forumStore.getUserContent(user.value.id);
 
-        userTopics.value = topics || [];
-        userComments.value = comments || [];
-    } catch (err) {
-        console.error('Error loading user content:', err);
-    } finally {
-        loading.value = false;
-    }
+    const { topics, comments } = await forumStore.getUserContent(user.value.id);
+
+    userTopics.value = topics || [];
+    userComments.value = comments || [];
+  } catch (err) {
+    console.error('Error loading user content:', err);
+    userTopics.value = forumStore.topics.filter(topic => 
+      topic.authorId === user.value.id
+    );
+    userComments.value = [];
+  } finally {
+    loading.value = false;
+  }
 }
 
 const handleFavoritesUpdate = () => {
@@ -626,6 +631,8 @@ const updateProfile = async () => {
         loading.value = false;
     }
 }
+
+
 
 onMounted(() => {
     loadUserData();
