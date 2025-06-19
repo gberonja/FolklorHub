@@ -9,7 +9,6 @@ export const useForumStore = defineStore('forum', () => {
   const loading = ref(false)
   const error = ref(null)
 
-  // Fetch all topics
   const fetchTopics = async () => {
     try {
       loading.value = true
@@ -66,7 +65,7 @@ export const useForumStore = defineStore('forum', () => {
       console.error('Error fetching forum topics:', err)
       error.value = err.message
       
-      // Fallback test data if no topics found or error occurs
+
       if (topics.value.length === 0) {
         topics.value = [
           {
@@ -99,17 +98,17 @@ export const useForumStore = defineStore('forum', () => {
     }
   }
 
-  // Get topic with comments
+
   const getTopicWithComments = async (topicId) => {
     try {
       loading.value = true
       error.value = null
       
-      // First try to find in existing topics
+
       let topic = topics.value.find(t => t.id === topicId)
       
       if (!topic) {
-        // If not found, try to fetch from database
+
         const { data: topicData, error: topicError } = await supabase
           .from('forum_topics')
           .select('*')
@@ -121,7 +120,7 @@ export const useForumStore = defineStore('forum', () => {
           return { topic: null, comments: [] }
         }
         
-        // Get author name
+
         let authorName = 'Nepoznati korisnik'
         if (topicData.user_id) {
           const { data: profile } = await supabase
@@ -147,7 +146,7 @@ export const useForumStore = defineStore('forum', () => {
         }
       }
       
-      // Fetch comments for this topic
+
       let topicComments = []
       
       try {
@@ -160,7 +159,7 @@ export const useForumStore = defineStore('forum', () => {
         if (commentsError) {
           console.log('No comments found or error:', commentsError)
         } else if (commentsData && commentsData.length > 0) {
-          // Get author names for comments
+
           topicComments = await Promise.all(
             commentsData.map(async (comment) => {
               let authorName = 'Nepoznati korisnik'
@@ -184,7 +183,7 @@ export const useForumStore = defineStore('forum', () => {
                 authorId: comment.user_id,
                 createdAt: comment.created_at,
                 likes: comment.likes || 0,
-                isLikedByUser: false // This would need to be fetched separately
+                isLikedByUser: false 
               }
             })
           )
@@ -205,7 +204,7 @@ export const useForumStore = defineStore('forum', () => {
     }
   }
 
-  // Create new topic
+
   const createTopic = async (title, description, tagsString) => {
     try {
       const userStore = useUserStore()
@@ -237,7 +236,7 @@ export const useForumStore = defineStore('forum', () => {
       
       if (createError) throw createError
       
-      // Refresh topics list
+
       await fetchTopics()
       
       return { success: true, topicId: data[0].id }
@@ -250,7 +249,7 @@ export const useForumStore = defineStore('forum', () => {
     }
   }
 
-  // Add comment to topic
+
    const addComment = async (topicId, content) => {
     try {
       const userStore = useUserStore()
@@ -262,7 +261,7 @@ export const useForumStore = defineStore('forum', () => {
       loading.value = true
       error.value = null
       
-      // Dodaj komentar
+
       const { data, error: createError } = await supabase
         .from('forum_comments')
         .insert([{
@@ -275,7 +274,7 @@ export const useForumStore = defineStore('forum', () => {
       
       if (createError) throw createError
       
-      // Ažuriraj broj komentara u temi
+
       const { error: updateError } = await supabase
         .from('forum_topics')
         .update({
@@ -296,14 +295,14 @@ export const useForumStore = defineStore('forum', () => {
     }
   }
 
-  // Search topics
+
   const searchTopics = async (query) => {
     try {
       if (!query.trim()) return []
       
       const searchTerm = query.toLowerCase()
       
-      // Search in existing topics first
+
       const filteredTopics = topics.value.filter(topic =>
         topic.title.toLowerCase().includes(searchTerm) ||
         topic.description.toLowerCase().includes(searchTerm) ||
@@ -317,13 +316,13 @@ export const useForumStore = defineStore('forum', () => {
     }
   }
 
-  // Get user content (topics and comments)
+
 const getUserContent = async (userId) => {
     try {
       loading.value = true
       error.value = null
       
-      // Dohvati korisničke teme
+
       const { data: userTopicsData, error: topicsError } = await supabase
         .from('forum_topics')
         .select('*')
@@ -332,7 +331,7 @@ const getUserContent = async (userId) => {
       
       if (topicsError) throw topicsError
       
-      // Dohvati korisničke komentare
+ 
       const { data: userCommentsData, error: commentsError } = await supabase
         .from('forum_comments')
         .select(`
@@ -344,7 +343,7 @@ const getUserContent = async (userId) => {
       
       if (commentsError) throw commentsError
       
-      // Formatiraj teme
+ 
       const userTopics = userTopicsData.map(topic => ({
         id: topic.id,
         title: topic.title,
@@ -354,7 +353,7 @@ const getUserContent = async (userId) => {
         tags: topic.tags || []
       }))
       
-      // Formatiraj komentare
+
       const userComments = userCommentsData.map(comment => ({
         id: comment.id,
         content: comment.content,
@@ -379,7 +378,7 @@ const getUserContent = async (userId) => {
     }
   }
 
-  // Delete topic
+
   const deleteTopic = async (topicId) => {
     try {
       const userStore = useUserStore()
@@ -399,7 +398,7 @@ const getUserContent = async (userId) => {
       
       if (deleteError) throw deleteError
       
-      // Remove from local state
+
       topics.value = topics.value.filter(topic => topic.id !== topicId)
       
       return { success: true }
@@ -412,10 +411,8 @@ const getUserContent = async (userId) => {
     }
   }
 
-  // Toggle comment like
   const toggleCommentLike = async (commentId, topicId) => {
     try {
-      // For now, just return success - would need proper like system
       return { success: true }
     } catch (err) {
       console.error('Error toggling comment like:', err)
@@ -441,21 +438,19 @@ const getUserContent = async (userId) => {
   }
 
   const checkUserLikes = async (topicId) => {
-    // Ova metoda će biti implementirana kasnije kad dodamo like funkcionalnost
     return { success: true }
   }
 
-  // Initialize - fetch topics on store creation
+
   fetchTopics()
 
   return {
-    // State
     topics,
     comments,
     loading,
     error,
     
-    // Actions
+
     fetchTopics,
     getTopicWithComments,
     createTopic,

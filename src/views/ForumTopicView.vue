@@ -249,7 +249,7 @@ const router = useRouter()
 const forumStore = useForumStore()
 const userStore = useUserStore()
 
-// Reactive references
+
 const topicId = computed(() => route.params.id)
 const topic = ref(null)
 const comments = ref([])
@@ -262,12 +262,12 @@ const replyToCommentId = ref(null)
 const showDeleteModal = ref(false)
 const commentToDelete = ref(null)
 
-// Computed properties
+
 const isTopicAuthor = computed(() => {
   return userStore.isAuthenticated && topic.value && topic.value.authorId === userStore.user.id
 })
 
-// Helper functions
+
 const formatDate = (dateString) => {
   if (!dateString) return ''
 
@@ -294,7 +294,7 @@ const isCommentAuthor = (comment) => {
   return userStore.isAuthenticated && comment.authorId === userStore.user.id
 }
 
-// Action functions
+
 const addComment = async () => {
   if (!userStore.isAuthenticated) {
     router.push(`/prijava?redirect=/forum/tema/${topicId.value}`)
@@ -309,7 +309,7 @@ const addComment = async () => {
     commenting.value = true
     commentError.value = ''
 
-    // Prepare content (add reply reference if needed)
+
     let content = newComment.value
     if (replyToCommentId.value) {
       const replyComment = comments.value.find((c) => c.id === replyToCommentId.value)
@@ -318,7 +318,6 @@ const addComment = async () => {
       }
     }
 
-    // Insert comment into database
     const { data, error } = await supabase
       .from('forum_comments')
       .insert([{
@@ -331,7 +330,7 @@ const addComment = async () => {
 
     if (error) throw error
 
-    // Update topic comments count
+
     const { error: updateError } = await supabase
       .from('forum_topics')
       .update({
@@ -342,11 +341,11 @@ const addComment = async () => {
 
     if (updateError) throw updateError
 
-    // Reset form
+
     newComment.value = ''
     replyToCommentId.value = null
 
-    // Reload topic data
+
     await fetchTopicData()
   } catch (error) {
     console.error('Error adding comment:', error)
@@ -362,14 +361,14 @@ const toggleLike = async (commentId) => {
     return
   }
 
-  // Implement like functionality if needed
+
   console.log('Toggle like for comment:', commentId)
 }
 
 const replyToComment = (comment) => {
   replyToCommentId.value = comment.id
   newComment.value = `@${comment.author}: `
-  // Scroll to textarea
+
   const textarea = document.querySelector('textarea')
   if (textarea) {
     textarea.scrollIntoView({ behavior: 'smooth' })
@@ -410,7 +409,7 @@ const deleteTopic = async () => {
   try {
     deleting.value = true
 
-    // First delete all comments for this topic
+
     const { error: commentsError } = await supabase
       .from('forum_comments')
       .delete()
@@ -418,10 +417,10 @@ const deleteTopic = async () => {
 
     if (commentsError) {
       console.warn('Error deleting comments:', commentsError)
-      // Continue anyway, sometimes comments might not exist
+
     }
 
-    // Delete the topic
+
     const { error } = await supabase
       .from('forum_topics')
       .delete()
@@ -430,10 +429,10 @@ const deleteTopic = async () => {
 
     if (error) throw error
 
-    // Refresh the topics list in the store
+
     await forumStore.fetchTopics()
 
-    // Redirect to forum with success message
+
     router.push('/forum')
   } catch (error) {
     console.error('Error deleting topic:', error)
@@ -456,8 +455,6 @@ const deleteComment = async () => {
 
   try {
     loading.value = true
-
-    // Delete the comment
     const { error } = await supabase
       .from('forum_comments')
       .delete()
@@ -466,7 +463,7 @@ const deleteComment = async () => {
 
     if (error) throw error
 
-    // Update topic comments count
+
     const { error: updateError } = await supabase
       .from('forum_topics')
       .update({
@@ -476,7 +473,6 @@ const deleteComment = async () => {
 
     if (updateError) throw updateError
 
-    // Reload topic data
     await fetchTopicData()
   } catch (error) {
     console.error('Error deleting comment:', error)
@@ -491,7 +487,7 @@ const fetchTopicData = async () => {
   try {
     loading.value = true
 
-    // Fetch topic
+
     const { data: topicData, error: topicError } = await supabase
       .from('forum_topics')
       .select('*')
@@ -500,7 +496,7 @@ const fetchTopicData = async () => {
 
     if (topicError) throw topicError
 
-    // Get author name
+
     let authorName = 'Nepoznati korisnik'
     if (topicData.user_id) {
       const { data: profile } = await supabase
@@ -525,7 +521,7 @@ const fetchTopicData = async () => {
       tags: topicData.tags || []
     }
 
-    // Fetch comments
+
     const { data: commentsData, error: commentsError } = await supabase
       .from('forum_comments')
       .select('*')
@@ -534,7 +530,7 @@ const fetchTopicData = async () => {
 
     if (commentsError) throw commentsError
 
-    // Get comment authors
+
     const commentsWithAuthors = await Promise.all(
       commentsData.map(async (comment) => {
         let authorName = 'Nepoznati korisnik'
@@ -556,8 +552,8 @@ const fetchTopicData = async () => {
           author: authorName,
           authorId: comment.user_id,
           createdAt: comment.created_at,
-          likes: 0, // Default for now
-          isLikedByUser: false // Default for now
+          likes: 0, 
+          isLikedByUser: false 
         }
       })
     )
@@ -572,7 +568,7 @@ const fetchTopicData = async () => {
   }
 }
 
-// Lifecycle
+
 onMounted(() => {
   fetchTopicData()
 })

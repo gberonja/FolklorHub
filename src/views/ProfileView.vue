@@ -426,7 +426,7 @@ const favoritesCount = computed(() => {
     return catalogStore.getFavoriteItems.length
 })
 
-// Clear messages after timeout
+
 const clearMessages = () => {
     setTimeout(() => {
         successMessage.value = ''
@@ -459,7 +459,7 @@ const handleAvatarUpload = async (event) => {
         const result = await userStore.uploadAvatar(file)
 
         if (result.success) {
-            user.value.photoURL = result.url // Ažuriraj sliku u UI
+            user.value.photoURL = result.url
             successMessage.value = 'Profilna slika uspješno ažurirana!'
             clearMessages()
         } else {
@@ -472,7 +472,6 @@ const handleAvatarUpload = async (event) => {
         clearMessages()
     } finally {
         avatarUploading.value = false;
-        // Reset input
         if (avatarInput.value) {
             avatarInput.value.value = '';
         }
@@ -535,7 +534,6 @@ const deleteAccount = async () => {
 
         if (result.success) {
             router.push('/');
-            // Message will be shown after redirect
         } else {
             errorMessage.value = `Greška: ${result.error}`
             clearMessages()
@@ -567,10 +565,9 @@ const loadUserData = async () => {
             experience: user.value.experience || ''
         };
 
-        // Load user's forum content
         await loadUserContent();
 
-        // Load favorites count
+
         if (catalogStore.items.length === 0) {
             await catalogStore.fetchItems()
         }
